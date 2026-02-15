@@ -1,0 +1,130 @@
+// Переменные
+$bg-color: #ffffff;
+$primary-color: #4d0368;
+$accent-bg: #e9c7ff;
+$text-dark: #353535;
+$interval-color: #1800c1;
+
+$font-reg: 'Onest-Regular';
+$font-med: 'Onest-Medium';
+$font-bold: 'Onest-ExtraBold';
+$font-light: 'Onest-Light';
+
+// Миксин для быстрого подключения шрифтов
+@mixin font-face($name, $path) {
+    @font-face {
+        font-family: $name;
+        src: url('./assets/Onest/static/#{$path}.ttf');
+    }
+}
+
+@include font-face($font-reg, 'Onest-Regular');
+@include font-face($font-bold, 'Onest-ExtraBold');
+@include font-face($font-med, 'Onest-Medium');
+@include font-face($font-med, 'Onest-Light');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: $bg-color;
+    font-family: $font-reg;
+    padding: 50px 0;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+nav {
+    padding: 50px 0;
+
+    a {
+        color: $primary-color;
+        background-color: $accent-bg;
+        text-decoration: none;
+        padding: 10px 20px;
+        display: inline-block;
+        border-radius: 10px;
+        font-family: $font-med;
+        transition: opacity 0.2s;
+
+        &:hover {
+            opacity: 0.8;
+        }
+    }
+}
+
+.info {
+    display: block;
+    margin-bottom: 50px;
+    color: #000000;
+    /* max-width: 800px; */
+    background: #ffebfb;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+li {
+    font-size: 16px;
+    color: $text-dark;
+    list-style: none;
+    margin-top: 5px;
+}
+
+h3 {
+    font-family: $font-bold;
+    font-size: 20px;
+    margin: 10px 10px 0 0;
+}
+
+.date-interval {
+    color: $interval-color;
+    display: block;
+    margin-bottom: 20px;
+}
+
+.doctors-container {
+    // Создаем 3 колонки
+    column-count: 4;
+    column-gap: 40px; // Расстояние между колонками
+    width: 100%;
+
+    .department-group {
+        border-right: 1px solid #b4c3df;
+        // Важно: запрещаем разрывать одну группу между колонками
+        break-inside: avoid;
+        padding-bottom: 30px; // Отступ между блоками внутри колонки
+
+        h3 {
+            margin: 0 0 10px 0; // Отступ от заголовка до списка
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        ul {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+
+            li {
+                margin-bottom: 5px; // Плотность имен врачей
+                color: #666; // Серый цвет как на фото
+            }
+        }
+
+    }
+}
+
+
+
+// Адаптив: на мобилках в одну колонку
+@media (max-width: 768px) {
+    .doctors-container {
+        grid-template-columns: 1fr;
+    }
+}
