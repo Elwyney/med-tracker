@@ -1,4 +1,6 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+const ExcelJS = require('exceljs');
+const fs = require('fs');
 const doctor = require('../doctors.json');
 const { getDates } = require('../date');
 const { previousDate, currentDate } = getDates();
@@ -85,13 +87,13 @@ class ClientServer {
                 "sec-fetch-dest": "empty",
                 "sec-fetch-mode": "cors",
                 "sec-fetch-site": "same-origin",
-                "cookie": "SESSION=N2FmNjhhZWMtMGJiYS00MWE0LWEwNWQtYzhiYjZhZWZmNDVj",
+                "cookie": "SESSION=NmY3NzY3YTEtMWI3Yi00Y2QyLTk4YmUtMzQ0YmRmZmQ5ZTMz",
                 "Referer": "https://remd.egisz.rosminzdrav.ru/"
             },
             method: "GET"
         })
         console.log(obj.department);
-        
+
         return response.json()
     }
 
@@ -110,14 +112,13 @@ class Process {
         for (const obj of department) {
             const response = await fetchServer.fetchDoctorsByDepartment(obj);
 
-            const signatureSet = new Set(response.list.map(res => res.emplList.replace(/\s*\(.*\)/, "").trim().toLowerCase()));
+            const signatureSet = new Set(response.list.map(res => res.emplList.replace(/\s*\(.*\)/, "").trim()));
 
             const notSignedUsers = obj.user
                 .map(user => {
                     const doctorFIO = `${user.Фамилия} ${user.Имя} ${user.Отчество || ""}`
                         .replace(/\s+/g, " ")
                         .trim()
-                        .toLowerCase();
                     const noSing = signatureSet.has(doctorFIO);
 
                     return {
@@ -146,6 +147,55 @@ async function getNotSignedUsers() {
 }
 
 
-module.exports = { getNotSignedUsers };
+const file = async () => {
+    try {
+        const users = await getNotSignedUsers();
+
+        if (!Array.isArray(users) || users.length === 0) {
+            console.error('Нет данных для экспорта');
+            return;
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Сотрудники');
+
+        // Заголовки
+        const headers = Object.keys(users[0]);
+        worksheet.addRow(headers);
+
+        // Стили заголовков: синий фон, белый текст, жирный
+        worksheet.getRow(1).eachCell(cell => {
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF0000FF' } // синий
+            };
+            cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        });
+
+        // Добавляем данные
+        users.forEach(user => {
+            worksheet.addRow(Object.values(user));
+        });
+
+        // Автоширина колонок по содержимому
+        worksheet.columns.forEach(column => {
+            let maxLength = 10;
+            column.eachCell({ includeEmpty: true }, cell => {
+                const text = cell.value ? cell.value.toString() : '';
+                if (text.length > maxLength) maxLength = text.length;
+            });
+            column.width = maxLength + 2; // немного отступа
+        });
+
+        const filePath = `./отчеты/${previousDate.slice(0, 10)}-${currentDate.slice(0, 10)}.xlsx`;
+        await workbook.xlsx.writeFile(filePath);
+
+    } catch (err) {
+        console.error('Ошибка при создании Excel:', err);
+    }
+};
+module.exports = { file };
+
 
 //string-similarity
