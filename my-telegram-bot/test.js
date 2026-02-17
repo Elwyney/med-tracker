@@ -1,89 +1,83 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-fetch("https://remd.egisz.rosminzdrav.ru/n2o/data/emdrRegistryList/dsMain?page=1&size=10&table_registrationDateTime_begin=2026-02-08T00%3A00%3A00&table_searchRadio_id=1&table_signPositionList=&table_signRoleList=&withCount=false", {
-  "headers": {
-    "accept": "*/*",
-    "accept-language": "ru,en;q=0.9",
-    "priority": "u=1, i",
-    "sec-ch-ua": "\"Chromium\";v=\"142\", \"YaBrowser\";v=\"25.12\", \"Not_A Brand\";v=\"99\", \"Yowser\";v=\"2.5\"",
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": "\"Linux\"",
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "cookie": "SESSION=N2Y0YjA3MjMtOTliZi00YjQyLTg5YWYtZTY4YjdiYmZlNzk4",
-    "Referer": "https://remd.egisz.rosminzdrav.ru/"
-  },
-  "body": null,
-  "method": "GET"
-}).then(res => res.json())
-.then(res => console.log(res))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+const doctor = require('./doctors.json');
+const { getDates } = require('./date');
+const { previousDate, currentDate } = getDates();
+// вытаскиваем только станционар. 
+const departmentType = doctor.reduce((acc, item) => {
+  const { Фамилия, Имя, Отчество, OIDструктурногоподразделения, Наименованиеструктурногоподразделения } = item
+  if (item.Типструктурногоподразделения?.includes('Стационарный')) {
+    const doctors = {
+      users: `${Фамилия} ${Имя} ${Отчество}`,
+      department: Наименованиеструктурногоподразделения
+    }
+    if (!acc.uniqueUsers.has(doctors.users)) {
+      acc.uniqueUsers.add(doctors.users)
+      acc.ListDoctors.push(doctors)
+    }
+    acc.ListDepartment.add(OIDструктурногоподразделения)
+  }
+  return acc
+}, { ListDoctors: [], ListDepartment: new Set(), uniqueUsers: new Set() })
+
+
+// запрос на сервер
+const fetchDoctorsByDepartment = async (data) => {
+  const params = {
+    page: 1,
+    size: 9999,
+    table_departMedOrg_id: data,
+    table_registrationDateTime_begin: previousDate,
+    table_registrationDateTime_end: currentDate,
+    table_searchRadio_id: 2,
+    withCount: false
+  };
+  const url = new URL("https://remd.egisz.rosminzdrav.ru/n2o/data/emdrRegistryList/dsMain");
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.append(key, value);
+  });
+  const response = await fetch(url.href, {
+    headers: {
+      "accept": "*/*",
+      "accept-language": "ru,en;q=0.9",
+      "priority": "u=1, i",
+      "sec-ch-ua": "\"Chromium\";v=\"142\", \"YaBrowser\";v=\"25.12\", \"Not_A Brand\";v=\"99\", \"Yowser\";v=\"2.5\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"Linux\"",
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-origin",
+      "cookie": "SESSION=MWI5NDgzODktMTc2Mi00NDAyLWEzMjEtMTYwNGU2MGUxZDY0",
+      "Referer": "https://remd.egisz.rosminzdrav.ru/"
+    },
+    method: "GET"
+  })
+  const jsonRes = await response.json();
+  const SUPER = new Set(jsonRes.list.map(res => res.emplList.replace(/\s*\(.*\)/, "").trim()))
+  return [...SUPER]
+}
+const sleep = (ms) => new Promise(res => setTimeout(res, ms))
+
+  (async () => {
+    const allListDoctors = new Set()
+    const { ListDepartment, ListDoctors } = departmentType
+
+    for (const item of ListDepartment) {
+      const doctors = await fetchDoctorsByDepartment(item);
+      doctors.forEach(doc => allListDoctors.add(doc));
+      console.log('новый');
+      await sleep(2000); // 
+    }
+
+
+    const noSing = ListDoctors.reduce((acc, item) => {
+      const { users, department } = item;
+
+      if (!allListDoctors.has(users)) {
+        if (!acc[department]) acc[department] = []
+        acc[department].push(users)
+      }
+      return acc
+    }, {})
+    console.log(noSing);
+  })()
 
