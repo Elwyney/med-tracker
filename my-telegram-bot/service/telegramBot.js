@@ -1,26 +1,20 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+require('dotenv').config();
+const { CHANNEL_ID, TOKEN } = process.env;
 const TelegramBot = require('node-telegram-bot-api');
 const cron = require('node-cron');
-const { file } = require('./ооп/app');
-const token = '6437547786:AAHSJTq_vx8kiAJ_V89bpphMYAXlhzqf1K8';
-const bot = new TelegramBot(token, { polling: true });
+const { fillTemplate } = require('./createExcel');
 const { getDates } = require('./date');
 const { previousDate, currentDate } = getDates();
-const CHANNEL_ID = '-1003473643652_2';
 
-
-const runFile = async () => {
-    await file()
-    const filePath = `./отчеты/${previousDate.slice(0, 10)}-${currentDate.slice(0, 10)}.xlsx`;
-    return filePath
-}
+const bot = new TelegramBot('6437547786:AAHSJTq_vx8kiAJ_V89bpphMYAXlhzqf1K8', { polling: true });
 
 const texts = ['Список «непослушных» за период', 'Следующие «невидимки» ещё не подписали документы за период']
 
 // Рассылка по расписанию (18:33 каждый день)
-cron.schedule('44 20 * * *', async () => {
-    const FILE_PATH = runFile()
-    bot.sendDocument(CHANNEL_ID, await FILE_PATH, {
+cron.schedule('19 10 * * *', async () => {
+    const FILE_PATH = fillTemplate()
+    bot.sendDocument('-1003473643652_2', await FILE_PATH, {
         caption: `<tg-emoji emoji-id="5436044822697750252">➡️</tg-emoji> Cледующие «невидимки» ещё не подписали документы за период ${previousDate.slice(0, 10)}-${currentDate.slice(0, 10)}`,
         parse_mode: 'HTML',
         message_thread_id: 2

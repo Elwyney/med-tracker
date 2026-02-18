@@ -1,10 +1,14 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-const doctor = require('./doctors.json');
+const doctor = require('../doctors.json');
 const { getDates } = require('./date');
 const { previousDate, currentDate } = getDates();
+
+
 // вытаскиваем только станционар. 
+// вытаскиваем уникальных пользователей и отделения
 const departmentType = doctor.reduce((acc, item) => {
   const { Фамилия, Имя, Отчество, OIDструктурногоподразделения, Наименованиеструктурногоподразделения } = item
+
   if (item.Типструктурногоподразделения?.includes('Стационарный')) {
     const doctors = {
       users: `${Фамилия} ${Имя} ${Отчество}`,
@@ -20,7 +24,7 @@ const departmentType = doctor.reduce((acc, item) => {
 }, { ListDoctors: [], ListDepartment: new Set(), uniqueUsers: new Set() })
 
 
-// запрос на сервер
+// структура запроса
 const fetchDoctorsByDepartment = async (data) => {
   const params = {
     page: 1,
@@ -46,7 +50,7 @@ const fetchDoctorsByDepartment = async (data) => {
       "sec-fetch-dest": "empty",
       "sec-fetch-mode": "cors",
       "sec-fetch-site": "same-origin",
-      "cookie": "SESSION=MWI5NDgzODktMTc2Mi00NDAyLWEzMjEtMTYwNGU2MGUxZDY0",
+      "cookie": `SESSION=ZjFiYzQ2ODEtYjA0OC00ZDMwLWE4ZjYtNGIzYWY3OGEzODBk`,
       "Referer": "https://remd.egisz.rosminzdrav.ru/"
     },
     method: "GET"
@@ -55,29 +59,30 @@ const fetchDoctorsByDepartment = async (data) => {
   const SUPER = new Set(jsonRes.list.map(res => res.emplList.replace(/\s*\(.*\)/, "").trim()))
   return [...SUPER]
 }
+// интервал задержки
 const sleep = (ms) => new Promise(res => setTimeout(res, ms))
+// иницилизация 
+const run = async () => {
+  // список подписанных
+  const allListDoctors = new Set()
+  const { ListDepartment, ListDoctors } = departmentType
+  // Запросы на сервер
+  for (const item of ListDepartment) {
+    const doctors = await fetchDoctorsByDepartment(item);
+    doctors.forEach(doc => allListDoctors.add(doc));
+    console.log('новый');
+    await sleep(2000); // 
+  }
+  // вывод не подписанных
+  const noSing = ListDoctors.reduce((acc, item) => {
+    const { users, department } = item;
 
-  (async () => {
-    const allListDoctors = new Set()
-    const { ListDepartment, ListDoctors } = departmentType
-
-    for (const item of ListDepartment) {
-      const doctors = await fetchDoctorsByDepartment(item);
-      doctors.forEach(doc => allListDoctors.add(doc));
-      console.log('новый');
-      await sleep(2000); // 
+    if (!allListDoctors.has(users)) {
+      if (!acc[department]) acc[department] = []
+      acc[department].push(users)
     }
-
-
-    const noSing = ListDoctors.reduce((acc, item) => {
-      const { users, department } = item;
-
-      if (!allListDoctors.has(users)) {
-        if (!acc[department]) acc[department] = []
-        acc[department].push(users)
-      }
-      return acc
-    }, {})
-    console.log(noSing);
-  })()
-
+    return acc
+  }, {})
+  return noSing
+}
+module.exports = { run }

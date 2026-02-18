@@ -1,26 +1,17 @@
 const ExcelJS = require('exceljs');
-
+const { run } = require('./fetch');
+const { getDates } = require('./date');
+const { previousDate, currentDate } = getDates();
 // Данные с отделениями и врачами
-const data = {
-  'Колопроктологическое отделение': ['Аитова Лилия Ринатовна', 'Суфияров Ришат Ринатович'],
-  'Гастроэнтерологическое отделение': ['Хисамутдинова Айгузель Маратовна', 'Магафурова Альфия Лябибовна'],
-  'Отделение анестезиологии-реанимации №1': [
-    'Давлетшина Гузель Фаритовна',
-    'Луник Людмила Алексеевна',
-    'Хайруллина Гузель Ильхамовна',
-    'Мурзина Лариса Салиевна',
-    'Назаров Джахонгир Нуриддинович'
-  ],
-};
 
 async function fillTemplate() {
   const workbook = new ExcelJS.Workbook();
-  
+
   // 1️⃣ Открываем существующий шаблон
   await workbook.xlsx.readFile('шаблон.xlsx'); // путь к вашему шаблону
-  
+
   // 2️⃣ Выбираем лист (замените 'Лист1' на реальное имя листа в шаблоне)
-  const worksheet = workbook.getWorksheet('Лист1'); 
+  const worksheet = workbook.getWorksheet('Лист1');
   if (!worksheet) {
     console.error("Лист 'Лист1' не найден. Проверьте название листа!");
     return;
@@ -40,6 +31,7 @@ async function fillTemplate() {
   let currentRow = startRow;
 
   // 6️⃣ Добавляем данные
+  const data = await run()
   for (const [department, doctors] of Object.entries(data)) {
     doctors.forEach(doctor => {
       const row = worksheet.getRow(currentRow);
@@ -51,8 +43,10 @@ async function fillTemplate() {
   }
 
   // 7️⃣ Сохраняем в новый файл
-  await workbook.xlsx.writeFile('doctors_filled.xlsx');
-  console.log('Excel файл создан на основе шаблона: doctors_filled.xlsx');
+  const filePath = `./отчеты/${previousDate.slice(0, 10)}-${currentDate.slice(0, 10)}.xlsx`;
+  await workbook.xlsx.writeFile(filePath);
+  console.log('Excel файл создан');
+  return filePath
 }
 
-fillTemplate();
+module.exports = { fillTemplate }
